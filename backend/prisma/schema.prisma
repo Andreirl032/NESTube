@@ -15,7 +15,7 @@ datasource db {
 // schema.prisma
 
 model User {
-  id           String   @id @default(uuid())
+  id           String   @id @default(cuid(2))
   email        String   @unique
   name         String
   role         Role     @default(USER) // Define quem pode fazer upload
@@ -38,7 +38,7 @@ enum Role {
 }
 
 model Video {
-  id           String         @id @default(uuid())
+  id           String         @id @default(cuid(2))
   title        String
   description  String?
   
@@ -58,7 +58,7 @@ model Video {
 
 // Nova tabela para a regra de negócio que você sugeriu
 model WatchHistory {
-  id               String   @id @default(uuid())
+  id               String   @id @default(cuid(2))
   
   userId           String
   user             User     @relation(fields: [userId], references: [id])
