@@ -1,0 +1,84 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// schema.prisma
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  role         Role     @default(USER) // Define quem pode fazer upload
+  
+  passwordHash String?
+  googleId     String?
+
+  videos       Video[]  // Vídeos que este usuário FEZ UPLOAD (se for ADMIN)
+  
+  // Relacionamento com o histórico de onde o usuário parou de assistir
+  watchHistory WatchHistory[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Video {
+  id           String         @id @default(uuid())
+  title        String
+  description  String?
+  
+  rawFileKey   String      
+  hlsFileKey   String?     
+  thumbnailKey String?
+  status       VideoStatus    @default(PENDING)
+  
+  uploaderId   String
+  uploader     User           @relation(fields: [uploaderId], references: [id])
+
+  watchers     WatchHistory[] // Histórico de quem assistiu a este vídeo
+
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+// Nova tabela para a regra de negócio que você sugeriu
+model WatchHistory {
+  id               String   @id @default(uuid())
+  
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  
+  videoId          String
+  video            Video    @relation(fields: [videoId], references: [id])
+
+  stoppedAtSeconds Int      @default(0) // Onde a pessoa parou (em segundos)
+  isCompleted      Boolean  @default(false) // Se chegou até o final (ex: > 95%)
+
+  updatedAt        DateTime @updatedAt
+
+  // Garante que o mesmo usuário não tenha dois históricos para o mesmo vídeo
+  @@unique([userId, videoId]) 
+}
+
+enum VideoStatus {
+  PENDING      // Vídeo criado no banco, aguardando upload do front
+  UPLOADED     // Upload concluído pro S3, aguardando Worker
+  PROCESSING   // FFMPEG está fatiando o vídeo agora
+  COMPLETED    // Finalizado, pronto para tocar
+  FAILED       // Deu erro no FFMPEG
+}
